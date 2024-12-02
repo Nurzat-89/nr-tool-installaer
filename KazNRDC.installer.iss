@@ -2,22 +2,81 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 #define ApplicationName "KazNRDC"
 ; Version value can be set by argument in cmd line, if you wish to run script directly from GUI, then please specify version number by manually
-#define ApplicationVersion "1.0.1"
+#define ApplicationVersion "1.0.6"
 #define ApplicationPublisher "KazNU"
-#define ApplicationExeName "KazNRDC.exe"
+#define ApplicationExeName "GUI.exe"
 #define SetupExeName "KazNRDCSetup"
-#define ControlpanelName "KazNRDC tool by Kaznu"
+#define ControlpanelName "KazNRDC tool by KazNU"
 #define DesktopIconName "KazNRDC tool"
 
 [Setup]
-AppId={{dddb3e45-f2e9-43ed-89c3-b089ce05cee3}
+AppId={{dddb3e45-f2e9-43ed-89c3-b089ce05cee4}
 AppName={#ApplicationName}
 AppVersion={#ApplicationVersion}
 ;AppVerName={#ApplicationName} {#ApplicationVersion}
 AppPublisher={#ApplicationPublisher}
-DefaultDirName={userappdata}\{#ApplicationName}
-DisableWelcomePage=yes
-OutputBaseFilename={#SetupExeName}_v{#ApplicationVersion}
+DefaultDirName={pf}\{#ApplicationName}
+DisableProgramGroupPage=yes
+DisableWelcomePage=no
+WizardImageFile=AppLogo-Large.bmp
+WizardSmallImageFile=AppLogo-Small.bmp
+; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=..\..\..\out\deploy\TestBuild
+LicenseFile=KazNRDC_License_Agreement.rtf
+OutputDir=..\output\installer
+OutputBaseFilename={#SetupExeName}_v{#ApplicationVersion}
+SetupIconFile=App.ico
+UninstallDisplayName = {#ControlpanelName}
+UninstallDisplayIcon={app}\App.ico
+UninstallIconFile={app}\App.ico
+Compression=lzma
+SolidCompression=yes
+WizardStyle=modern
+UsePreviousTasks=no
+UsePreviousAppDir=no
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+
+[Files]
+Source: "windowsdesktop-runtime-6.0.36-win-x64.exe"; DestDir: {tmp}; Flags: deleteafterinstall; AfterInstall: InstallFramework;
+Source: "..\nr-tool\out\Debug\net6.0-windows\{#ApplicationExeName}"; DestDir: "{app}"; Flags: ignoreversion 
+Source: "..\nr-tool\out\Debug\net6.0-windows\GUI.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\nr-tool\out\Debug\net6.0-windows\*.dll"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "App.ico"; DestDir:"{app}";
+; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[Icons]
+Name: "{autoprograms}\{#DesktopIconName}"; Filename: "{app}\{#ApplicationExeName}";IconFilename:"{app}\App.ico"
+Name: "{autodesktop}\{#DesktopIconName}"; Filename: "{app}\{#ApplicationExeName}"; Tasks: desktopicon;IconFilename:"{app}\App.ico"
+
+[Run]
+Filename: "{app}\{#ApplicationExeName}"; Description: "{cm:LaunchProgram,{#StringChange(ApplicationName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+
+[Code]
+
+function IsDesktopRuntimeInstalled: Boolean;
+begin
+   Result:=True;
+end;
+
+procedure InstallFramework;
+var
+  StatusText: string;
+  ResultCode: Integer;
+begin
+  StatusText := WizardForm.StatusLabel.Caption;
+  WizardForm.StatusLabel.Caption := 'Installing .NET framework...';
+  WizardForm.ProgressGauge.Style := npbstMarquee;
+  try
+    if not IsDesktopRuntimeInstalled then
+    begin
+      Exec(ExpandConstant('{tmp}\windowsdesktop-runtime-6.0.36-win-x64.exe'), '/q /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);  
+    end; 
+  finally
+    WizardForm.StatusLabel.Caption := StatusText;
+    WizardForm.ProgressGauge.Style := npbstNormal;
+  end;
+end;
